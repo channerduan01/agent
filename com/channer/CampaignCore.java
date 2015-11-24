@@ -79,8 +79,10 @@ public class CampaignCore {
     }
 
     private double bidUcsDefault = 0.12d;
+    private boolean shouldBid = true;
 
     public double bidForUCS() {
+        if (!shouldBid) return 0;
         return bidUcsDefault;
     }
 
@@ -168,7 +170,11 @@ public class CampaignCore {
                 break;
             }
         }
-        if (!isNeed && today > 1) return;
+        if (!isNeed && today > 1) {
+            shouldBid = false;
+            return;
+        } else
+            shouldBid = true;
 
         ucsBid = level;
         if (ucsBid < 0.78d) {
@@ -202,6 +208,7 @@ public class CampaignCore {
     }
 
     public void clear() {
+        shouldBid = true;
         ucsBid = 0.2;
         quality = 1.0d;
         today = 0;
