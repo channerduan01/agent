@@ -20,6 +20,14 @@ public class CampaignPressureModel {
         this.impression = tracker.avgImpressions / reliefBreadth;
     }
 
+    public double getExtraFactor() {
+        if (trackModel.property != CampaignTrackModel.WON_OTHERS) {
+            return 1.3d;
+        } else {
+            return 1d;
+        }
+    }
+
     @Override
     public String toString() {
         StringBuffer buffer = new StringBuffer();

@@ -167,7 +167,7 @@ public class SegmentModel {
     public double calcuAvgPressure(double mEffect, double vEffect) {
         double require = 0d;
         for (CampaignPressureModel pressure : campaignPressurs) {
-            require += pressure.impression / impTransFactor(avgMRatio, mEffect, avgVRatio, vEffect);
+            require += pressure.impression * pressure.getExtraFactor() / impTransFactor(avgMRatio, mEffect, avgVRatio, vEffect);
         }
         return require;
     }

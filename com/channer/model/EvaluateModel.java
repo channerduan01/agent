@@ -32,12 +32,15 @@ public class EvaluateModel {
         // special method to optimize initial period
         if (today <= 7) {
             pressurePreRatio += 0.1d;
+            pressureLength += 1;
         }
         if (today <= 5) {
             pressurePreRatio += 0.1d;
+            pressureLength += 1;
         }
         if (today <= 3) {
             pressurePreRatio += 0.05d;
+            pressureLength += 1;
         }
     }
 

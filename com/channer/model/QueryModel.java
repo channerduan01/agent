@@ -37,9 +37,11 @@ public class QueryModel {
         double rate;
         int d = today - updateDay;
         if (d > 2 && d < 4) {
-            rate = 0.92;
-        } else if (d > 4 && d < 8) {
-            rate = 0.88;
+            rate = 0.9;
+        } else if (d >= 4 && d < 7) {
+            rate = 0.8;
+        } else if (d >= 7 && d < 10) {
+            rate = 0.7;
         } else {
             return;
         }

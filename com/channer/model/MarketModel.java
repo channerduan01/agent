@@ -78,7 +78,7 @@ public class MarketModel {
 //        System.out.println("total users calculated by core:" + userNumber);
     }
 
-    private static final double QUERY_BASIC_PRICE[] = {1.0, 1.5, 1.5, 3};
+    private static final double QUERY_BASIC_PRICE[] = {0.1, 0.15, 0.15, 0.3};
 
     private void initQuerySpace() {
         int publisherSize = mPublisherModel.mPublisers.length;
@@ -156,11 +156,11 @@ public class MarketModel {
                 mQuerySpace[index].bidPrice /= 1.2d;
                 numberOfOne++;
             } else if (winRatio == 0) {
-                mQuerySpace[index].bidPrice *= 1.3d;
+                mQuerySpace[index].bidPrice *= 1.2d;
                 numberOfZero++;
             } else {
                 mQuerySpace[index].bidPrice =
-                        mQuerySpace[index].bidPrice * (1d + 0.3d * (1d - winRatio));
+                        mQuerySpace[index].bidPrice * (1d + 0.2d * (1d - winRatio));
             }
         }
         System.out.println("!!!!!!!!!!! total cost !!!!!!!!!!!!  " + cost);
@@ -247,7 +247,7 @@ public class MarketModel {
             // test
 //            tmpDouble = m * v * 0.1d;
             bundle.addQuery(mQuerySpace[pickChoices.get(i)].adxQuery,
-                    tmpDouble,
+                    tmpDouble * 1000d,
                     new Ad(null), campaign.id, 1);
         }
 
@@ -267,7 +267,6 @@ public class MarketModel {
         double timeFactor = avgMinForNow / avgMinForWhole;
 
         System.out.println("!!!!!!!TimePressure:" + campaign.id + " - " + timeFactor);
-
 
         if (timeFactor < 1d) return 1d;
         else if (timeFactor > 2.1d) return 2.1d;
