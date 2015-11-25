@@ -87,17 +87,17 @@ public class CampaignCore {
     }
 
     public AdxBidBundle bidForExchangeX() {
-        List<CampaignData> campaignList = getActiveCampaign();
+        int dayBiddingFor = today + 1;
+        List<CampaignData> campaignList = getActiveCampaign(dayBiddingFor);
         return marketModel.createBidBundle(campaignList, today);
     }
 
-    private List<CampaignData> getActiveCampaign() {
-        int dayBiddingFor = today + 1;
+    private List<CampaignData> getActiveCampaign(int day) {
         List<CampaignData> list = new ArrayList<>();
         CampaignData tmp;
         for (Integer integer : myActiveCampaignIndexs) {
             tmp = myCampaigns.get(integer);
-            if (tmp.dayStart <= dayBiddingFor && tmp.dayEnd >= dayBiddingFor && tmp.impsTogo() > 0) {
+            if (tmp.dayStart <= day && tmp.dayEnd >= day && tmp.impsTogo() > 0) {
                 list.add(tmp);
             }
         }
