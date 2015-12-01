@@ -1,6 +1,7 @@
 package com.channer.model;
 
 
+import com.channer.BidBundleUtil;
 import com.channer.CampaignData;
 import edu.umich.eecs.tac.props.Ad;
 import tau.tac.adx.ads.properties.AdType;
@@ -133,7 +134,7 @@ public class MarketModel {
         Set<AdNetworkKey> keySet = report.keys();
         AdNetworkReportEntry entry;
         for (AdNetworkKey key : keySet) {
-            System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
+//            System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
             cost += report.getAdNetworkReportEntry(key).getCost();
             entry = report.getAdNetworkReportEntry(key);
 
@@ -150,7 +151,7 @@ public class MarketModel {
             int index = segMark * publisherChannelSize + publisherIndex * 4 + channel;
 
             double winRatio = (double) entry.getWinCount() / (double) entry.getBidCount();
-            System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
+//            System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
 
             if (winRatio == 1) {
                 mQuerySpace[index].bidPrice /= 1.2d;
@@ -240,7 +241,8 @@ public class MarketModel {
         count *= 1.5d;
         for (int i = 0; i < pickChoices.size() && count > 0; i++) {
             count -= mQuerySpace[pickChoices.get(i)].population;
-            tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice * calculateTimePressure(campaign, today);
+            tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice *
+                    BidBundleUtil.calcuTimePressure(campaign, today-1);
             mQuerySpace[pickChoices.get(i)].externalMark = true;
             mQuerySpace[pickChoices.get(i)].updateDay = today;
             mQuerySpace[pickChoices.get(i)].bidPrice = tmpDouble;
@@ -253,24 +255,9 @@ public class MarketModel {
 
         // limitation
         double impressionLimit = campaign.impsTogo();
-        double budgetLimit = campaign.budget;
+        double budgetLimit = campaign.budget*2;
         bundle.setCampaignDailyLimit(campaign.id,
                 (int) impressionLimit, budgetLimit);
-    }
-
-    private double calculateTimePressure(CampaignData campaign, int today) {
-        double camLength = campaign.dayEnd - campaign.dayStart + 1d;
-        double camDayLeft = campaign.dayEnd - today;
-        double avgMinForWhole = campaign.reachImps / camLength;
-        double avgMinForNow = campaign.impsTogo() / camDayLeft;
-
-        double timeFactor = avgMinForNow / avgMinForWhole;
-
-        System.out.println("!!!!!!!TimePressure:" + campaign.id + " - " + timeFactor);
-
-        if (timeFactor < 1d) return 1d;
-        else if (timeFactor > 2.1d) return 2.1d;
-        else return timeFactor;
     }
 
     public void printCore() {

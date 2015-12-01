@@ -26,6 +26,15 @@ public class CampaignData {
     public CampaignStats stats;
     public double budget;
 
+    /* Special ratio */
+    public double profitRatio;
+    public double timePressure;
+
+    public void updateRatio(int today) {
+        timePressure = BidBundleUtil.calcuTimePressure(this, today);
+        profitRatio = BidBundleUtil.calcuProfitRatio(this);
+    }
+
     public CampaignData(InitialCampaignMessage icm) {
         reachImps = icm.getReachImps();
         dayStart = icm.getDayStart();
@@ -57,8 +66,9 @@ public class CampaignData {
 
     @Override
     public String toString() {
-        return "Campaign ID " + id + ": " + "day " + dayStart + " to "
-                + dayEnd + " " + targetSegment + ", reach: " + reachImps
+        return "Campaign ID " + id + ": " + " " + dayStart + "-"
+                + dayEnd + " " + targetSegment + ", reach: " + stats.getTargetedImps()+ "/" +reachImps
+                + " pressure:" + timePressure + " pRatio:" + profitRatio
                 + " coefs: (v=" + videoCoef + ", m=" + mobileCoef + ")";
     }
 

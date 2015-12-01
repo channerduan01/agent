@@ -280,6 +280,7 @@ public class LucyAdNetwork extends Agent {
 				+ ". UCS Level set to " + notificationMessage.getServiceLevel()
 				+ " at price " + notificationMessage.getPrice()
 				+ " Quality Score is: " + notificationMessage.getQualityScore());
+		mCampaignCore.updateStatus();
 	}
 
 	/**

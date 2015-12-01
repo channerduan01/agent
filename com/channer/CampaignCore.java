@@ -50,7 +50,7 @@ public class CampaignCore {
     // store all evaluations for campaign
     private List<EvaluateModel> evaluateList = new ArrayList<>();
 
-    private double bidCampaignDefault = 0.4d;
+    private double bidCampaignDefault = 0.5d;
     private boolean isDesire = false;
 
     public long bidForNewCampaign(CampaignData com) {
@@ -63,12 +63,14 @@ public class CampaignCore {
         long upper = CampaignBidUtil.getCamBidUpperBound(com.reachImps, quality);
         long bottom = CampaignBidUtil.getCamBidBottomBound(com.reachImps, quality);
         double range = upper - bottom;
-        double emptyRatio = 1.2d - evaluate.pressurePreRatio - evaluate.requireRatio;
+
+
+        double emptyRatio = 1.0d - evaluate.pressurePreRatio - evaluate.requireRatio;
         isDesire = false;
         if (emptyRatio < 0) {
             cmpBidMillis = upper;
         } else {
-            emptyRatio /= 1.2d;
+            emptyRatio /= 1.0d;
             cmpBidMillis = bottom + (long) (range * quality * bidCampaignDefault * (1d - emptyRatio));
             isDesire = true;
         }
@@ -87,25 +89,19 @@ public class CampaignCore {
     }
 
     public AdxBidBundle bidForExchangeX() {
-        int dayBiddingFor = today + 1;
-        List<CampaignData> campaignList = getActiveCampaign(dayBiddingFor);
-        return marketModel.createBidBundle(campaignList, today);
-    }
+        List<CampaignData> list = getNextDayActiveCampaign();
 
-    private List<CampaignData> getActiveCampaign(int day) {
-        List<CampaignData> list = new ArrayList<>();
-        CampaignData tmp;
-        for (Integer integer : myActiveCampaignIndexs) {
-            tmp = myCampaigns.get(integer);
-            if (tmp.dayStart <= day && tmp.dayEnd >= day && tmp.impsTogo() > 0) {
-                list.add(tmp);
-            }
+        List<CampaignData> removelist = BidBundleUtil.costControlFilterForMycampaigns(list, today);
+        for (CampaignData campaign : removelist) {
+            list.remove(campaign);
+            myActiveCampaignIndexs.remove((Integer) campaign.id);
         }
-
-        // reset the priority
         int length = list.size();
-        for (int i = 0; i < length - 1; i++)
-            for (int j = i + 1; j < length; j++) {
+        int i, j;
+        CampaignData tmp;
+        // reset the priority
+        for (i = 0; i < length - 1; i++)
+            for (j = i + 1; j < length; j++) {
                 if (list.get(i).targetSegment.size() < list.get(j).targetSegment.size() ||
                         (list.get(i).targetSegment.size() == list.get(j).targetSegment.size() &&
                                 list.get(i).dayEnd > list.get(j).dayEnd)) {
@@ -114,6 +110,26 @@ public class CampaignCore {
                     list.set(j, tmp);
                 }
             }
+        return marketModel.createBidBundle(list, today + 1);
+    }
+
+    public void updateStatus() {
+        for (Integer integer : myActiveCampaignIndexs) {
+            // use today to calculate metrics ratios
+            myCampaigns.get(integer).updateRatio(today);
+        }
+    }
+
+    private List<CampaignData> getNextDayActiveCampaign() {
+        int day = today + 1;
+        List<CampaignData> list = new ArrayList<>();
+        CampaignData tmp;
+        for (Integer integer : myActiveCampaignIndexs) {
+            tmp = myCampaigns.get(integer);
+            if (tmp.dayStart <= day && tmp.dayEnd >= day && tmp.impsTogo() > 0) {
+                list.add(tmp);
+            }
+        }
         return list;
     }
 
@@ -199,11 +215,20 @@ public class CampaignCore {
         }
         myActiveCampaignIndexs.removeAll(removeList);
 
-        // output all the evaluations finally
+        // output all the data finally
         if (today >= 60) {
+            System.out.println("\n\n!!!!!!!!!! EvaluateModel");
             for (EvaluateModel evaluate : evaluateList) {
                 System.out.println(evaluate.showEvaluate());
             }
+            System.out.println("\n\n!!!!!!!!!! MyCampaigns");
+            Iterator<Map.Entry<Integer, CampaignData>> it = myCampaigns.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<Integer, CampaignData> entry = it.next();
+                System.out.println("" + entry.getKey() + " " + entry.getValue());
+            }
+            System.out.println("\n\n!!!!!!!!!! Core");
+            marketModel.printCore();
         }
     }
 
