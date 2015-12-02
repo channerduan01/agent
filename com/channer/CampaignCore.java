@@ -168,9 +168,9 @@ public class CampaignCore {
 
     public void campaignStateUpdate(int id, CampaignStats cstats) {
         myCampaigns.get(id).setStats(cstats);
-        System.out.println("Day " + today + ": Updating campaign " + id + " stats: "
+        System.out.println("Day " + today + ": Updating campaign " + id + " imp:"
                 + cstats.getTargetedImps() + "/"
-                + myCampaigns.get(id).reachImps + " Cost of imps is "
+                + myCampaigns.get(id).reachImps + " cost:"
                 + cstats.getCost() + " budget:" + myCampaigns.get(id).budget);
         if (myCampaigns.get(id).impsTogo() == 0) {
             myActiveCampaignIndexs.remove(myCampaigns.get(id));

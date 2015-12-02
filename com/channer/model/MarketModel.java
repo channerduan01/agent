@@ -79,7 +79,7 @@ public class MarketModel {
 //        System.out.println("total users calculated by core:" + userNumber);
     }
 
-    private static final double QUERY_BASIC_PRICE[] = {0.1, 0.15, 0.15, 0.3};
+    private static final double QUERY_BASIC_PRICE[] = {0.02, 0.035, 0.035, 0.05};
 
     private void initQuerySpace() {
         int publisherSize = mPublisherModel.mPublisers.length;
@@ -156,22 +156,24 @@ public class MarketModel {
             if (winRatio == 1) {
                 mQuerySpace[index].bidPrice /= 1.2d;
                 numberOfOne++;
+                mQuerySpace[index].numReduce++;
             } else if (winRatio == 0) {
                 mQuerySpace[index].bidPrice *= 1.2d;
                 numberOfZero++;
+                mQuerySpace[index].numAdd++;
             } else {
                 mQuerySpace[index].bidPrice =
-                        mQuerySpace[index].bidPrice * (1d + 0.2d * (1d - winRatio));
+                        mQuerySpace[index].bidPrice * (1d + 0.2d * (0.8d - winRatio));
             }
         }
         System.out.println("!!!!!!!!!!! total cost !!!!!!!!!!!!  " + cost);
 
-        double ratioOfOne = (double)numberOfOne / (double)keySet.size();
-        double ratioOfZero = (double)numberOfZero / (double)keySet.size();
+        double ratioOfOne = (double) numberOfOne / (double) keySet.size();
+        double ratioOfZero = (double) numberOfZero / (double) keySet.size();
 
         double redress = 1d;
         if (ratioOfOne > 0.92d) {
-            redress = 0.7d;
+            redress = 0.6d;
         } else if (ratioOfZero > 0.92d) {
             redress = 2d;
         }
@@ -181,6 +183,10 @@ public class MarketModel {
             int size = mQuerySpace.length;
             for (int i = 0; i < size; i++) {
                 mQuerySpace[i].bidPrice *= redress;
+                if (redress > 1)
+                    mQuerySpace[i].numRedressAdd++;
+                else
+                    mQuerySpace[i].numRedressReduce++;
                 mQuerySpace[i].updateDay = today;
             }
         }
@@ -242,7 +248,7 @@ public class MarketModel {
         for (int i = 0; i < pickChoices.size() && count > 0; i++) {
             count -= mQuerySpace[pickChoices.get(i)].population;
             tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice *
-                    BidBundleUtil.calcuTimePressure(campaign, today-1);
+                    BidBundleUtil.calcuTimePressure(campaign, today - 1);
             mQuerySpace[pickChoices.get(i)].externalMark = true;
             mQuerySpace[pickChoices.get(i)].updateDay = today;
             mQuerySpace[pickChoices.get(i)].bidPrice = tmpDouble;
@@ -255,7 +261,7 @@ public class MarketModel {
 
         // limitation
         double impressionLimit = campaign.impsTogo();
-        double budgetLimit = campaign.budget*2;
+        double budgetLimit = campaign.budget * 2;
         bundle.setCampaignDailyLimit(campaign.id,
                 (int) impressionLimit, budgetLimit);
     }
@@ -269,7 +275,7 @@ public class MarketModel {
         int publisherChannelTotal = mPublisherModel.mPublisers.length * 4;
         for (int i = 0; i < mQuerySpace.length; i++) {
             if (i % publisherChannelTotal == 0) System.out.println("");
-            System.out.println("" + i +"-" + mQuerySpace[i].toString());
+            System.out.println("" + i + "-" + mQuerySpace[i].toString());
         }
 
     }

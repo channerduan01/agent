@@ -325,12 +325,12 @@ public class LucyAdNetwork extends Agent {
 	 * Users and Publishers statistics: popularity and ad type orientation
 	 */
 	private void handleAdxPublisherReport(AdxPublisherReport adxPublisherReport) {
-		System.out.println("Publishers Report: ");
-		for (PublisherCatalogEntry publisherKey : adxPublisherReport.keys()) {
-			AdxPublisherReportEntry entry = adxPublisherReport
-					.getEntry(publisherKey);
-			System.out.println(entry.toString());
-		}
+//		System.out.println("Publishers Report: ");
+//		for (PublisherCatalogEntry publisherKey : adxPublisherReport.keys()) {
+//			AdxPublisherReportEntry entry = adxPublisherReport
+//					.getEntry(publisherKey);
+//			System.out.println(entry.toString());
+//		}
 		mCampaignCore.updatePublsers(adxPublisherReport);
 	}
 

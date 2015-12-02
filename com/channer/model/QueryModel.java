@@ -14,22 +14,33 @@ public class QueryModel {
 
     public boolean externalMark;
 
+    public int numDecay;
+    public int numAdd;
+    public int numReduce;
+    public int numRedressAdd;
+    public int numRedressReduce;
+
     public QueryModel(AdxQuery query, double bidPrice, double population) {
         this.adxQuery = query;
         this.bidPrice = bidPrice;
         this.population = population;
         updateDay = 0;
         externalMark = false;
+        numDecay = numAdd = numReduce = numRedressAdd = numRedressReduce = 0;
     }
 
     @Override
     public String toString() {
         StringBuffer buffer = new StringBuffer();
-        buffer.append("QueryModel---")
+        buffer.append("QueryModel-").append(numAdd).append(",")
+                .append(numReduce).append(",")
+                .append(numDecay).append(",")
+                .append(numRedressAdd).append(",")
+                .append(numRedressReduce).append("--")
                 .append("bid-").append(bidPrice)
                 .append(" ").append(adxQuery)
                 .append(" popu:").append(population)
-            ;
+        ;
         return buffer.toString();
     }
 
@@ -46,6 +57,7 @@ public class QueryModel {
             return;
         }
         bidPrice = bidPrice * rate;
+        numDecay++;
     }
 
 }
