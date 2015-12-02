@@ -79,7 +79,7 @@ public class MarketModel {
 //        System.out.println("total users calculated by core:" + userNumber);
     }
 
-    private static final double QUERY_BASIC_PRICE[] = {0.02, 0.035, 0.035, 0.05};
+    private static final double QUERY_BASIC_PRICE[] = {0.1, 0.3, 0.3, 0.5};
 
     private void initQuerySpace() {
         int publisherSize = mPublisherModel.mPublisers.length;
@@ -114,14 +114,108 @@ public class MarketModel {
         }
     }
 
+    private double efficienceMeasureForOneSegment(double oneSegInBoard[], int length, int segIndex, List<CampaignData> list) {
+
+        int i;
+        double mE = 0;
+        double vE = 0;
+        double mR = mCoreData[segIndex].avgMRatio;
+        double vR = mCoreData[segIndex].avgVRatio;
+        double impRequire = 0;
+
+        for (i = 0; i < length; i++)
+            impRequire += oneSegInBoard[i];
+        if (impRequire == 0)
+            return 0;
+        for (i = 0; i < length; i++)
+            if (oneSegInBoard[i] != 0) {
+                mE += oneSegInBoard[i] / impRequire * list.get(i).mobileCoef;
+                vE += oneSegInBoard[i] / impRequire * list.get(i).videoCoef;
+            }
+
+        double sumImpSupply = mCoreData[segIndex].population * SegmentModel.impTransFactor(
+                mR, mE, vR, vE);
+
+        double meetR = sumImpSupply / impRequire;
+
+        double cost = mCoreData[segIndex].p1 / (mE * vE) * mR * vR +
+                mCoreData[segIndex].p2 / mE * mR * (1d - vR) +
+                mCoreData[segIndex].p3 / vE * (1d - mR) * vR +
+                mCoreData[segIndex].p4 * (1d - mR) * (1d - vR);
+
+
+        System.out.println("!!!!!efficience:" + segIndex + "  " + meetR + " " + cost);
+
+        return meetR / cost;
+    }
+
     /*
         Core algorithm
      */
-    public AdxBidBundle createBidBundle(List<CampaignData> campaignList, int today) {
+    public AdxBidBundle createBidBundle(List<CampaignData> list, int today) {
+        int i, j, k;
+        int numCam = list.size();
+        System.out.println("!!!!!!!!!!!!!!Task division start!!!!!!!!!!!!!!");
+        double board[][] = new double[mCoreData.length + 1][numCam + 1];
+        for (i = 0; i <= mCoreData.length; i++)
+            for (j = 0; j <= numCam; j++)
+                board[i][j] = 0;
+
+        double tmpDouble;
+        for (i = 0; i < numCam; i++) {
+            tmpDouble = list.get(i).impsTogo() / list.get(i).segments.size();
+            board[mCoreData.length][i] = list.get(i).segments.size();
+            for (int segMark : list.get(i).segments)
+                board[segMark][i] = tmpDouble;
+        }
+        for (i = 0; i < mCoreData.length; i++)
+            board[i][numCam] = efficienceMeasureForOneSegment(board[i], numCam, i, list);
+        System.out.println("test!!!!!!!!!!!!!!!!!!!!!!!!!");
+        double divide;
+        double benefit, resE1, resE2 = 0, oriE1, oriE2;
+        int bestIndex = 0;
+//        for (i = 0; i < numCam; i++)
+//            if (board[mCoreData.length][i] > 1)
+//                for (j = 0; j < mCoreData.length - 1; j++)
+//                    if (board[j][i] > 0) {
+//                        System.out.println("test!!!!!! " + j + "--" + i);
+//                        divide = board[j][i] / 2;
+//                        board[j][i] -= divide;
+//                        oriE1 = board[j][numCam];
+//                        resE1 = efficienceMeasureForOneSegment(board[j], numCam, j, list);
+//                        benefit = 0;
+//                        for (k = j + 1; k < mCoreData.length; k++)
+//                            if (board[k][i] > 0) {
+//                                oriE2 = board[k][numCam];
+//                                board[k][i] += divide;
+//                                resE2 = efficienceMeasureForOneSegment(board[k], numCam, k, list);
+//                                tmpDouble = resE1 + resE2 - oriE1 - oriE2;
+//                                if (tmpDouble > benefit) {
+//                                    benefit = tmpDouble;
+//                                    bestIndex = k;
+//                                }
+//                                board[k][i] -= divide;
+//                            }
+//                        if (benefit > 0) {
+//                            board[bestIndex][i] -= divide;
+//                            board[j][numCam] = resE1;
+//                            board[bestIndex][numCam] = resE2;
+//                        } else
+//                            board[j][i] += divide;
+//                    }
+
+        for (i = 0;i <= numCam ;i++) {
+            for (j = 0; j <= mCoreData.length; j++)
+                System.out.print("" + board[j][i] + ",");
+            System.out.print("\n");
+        }
+        System.out.println("!!!!!!!!!!!!!!Task division end!!!!!!!!!!!!!!");
+
+
         AdxBidBundle bidBundle = new AdxBidBundle();
         int size = mQuerySpace.length;
-        for (int i = 0; i < size; i++) mQuerySpace[i].externalMark = false;
-        for (CampaignData campaignData : campaignList) {
+        for (i = 0; i < size; i++) mQuerySpace[i].externalMark = false;
+        for (CampaignData campaignData : list) {
             buildQueryForCampaign(bidBundle, campaignData, today);
         }
         return bidBundle;
@@ -134,7 +228,7 @@ public class MarketModel {
         Set<AdNetworkKey> keySet = report.keys();
         AdNetworkReportEntry entry;
         for (AdNetworkKey key : keySet) {
-//            System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
+            System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
             cost += report.getAdNetworkReportEntry(key).getCost();
             entry = report.getAdNetworkReportEntry(key);
 
@@ -151,7 +245,7 @@ public class MarketModel {
             int index = segMark * publisherChannelSize + publisherIndex * 4 + channel;
 
             double winRatio = (double) entry.getWinCount() / (double) entry.getBidCount();
-//            System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
+            System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
 
             if (winRatio == 1) {
                 mQuerySpace[index].bidPrice /= 1.2d;
@@ -277,7 +371,6 @@ public class MarketModel {
             if (i % publisherChannelTotal == 0) System.out.println("");
             System.out.println("" + i + "-" + mQuerySpace[i].toString());
         }
-
     }
 
     private boolean mIsNeedUpdatePublisherData = false;
@@ -290,6 +383,17 @@ public class MarketModel {
             mPublisherModel.updateVideoRatio(entry.getPublisherName(), vRatio);
         }
         mIsNeedUpdatePublisherData = true;
+    }
+
+    /**
+     *
+     * @param segments
+     * @return total populations
+     */
+    public double calcuPopulations(Set<MarketSegment> segments) {
+        double num = 0d;
+        for (Integer integer :SegmentModel.mapMarketSegment(segments)) num += mCoreData[integer].population;
+        return num;
     }
 
     public void addCampaignTracker(CampaignTrackModel tracker) {

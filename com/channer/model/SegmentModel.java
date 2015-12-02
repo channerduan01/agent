@@ -118,6 +118,8 @@ public class SegmentModel {
     public double avgVRatio;
     public List<CampaignPressureModel> campaignPressurs = new ArrayList<>();
 
+    public double p1, p2, p3, p4;
+    private static final double QUERY_BASIC_PRICE[] = {0.02, 0.035, 0.035, 0.05};
 
     public SegmentModel(int index, List<MarketFragmentModel> fragments) {
         campaignPressurs.clear();
@@ -125,6 +127,11 @@ public class SegmentModel {
         this.fragments.clear();
         this.fragments.addAll(fragments);
         updateDataModel();
+
+        p1 = QUERY_BASIC_PRICE[0];
+        p2 = QUERY_BASIC_PRICE[1];
+        p3 = QUERY_BASIC_PRICE[2];
+        p4 = QUERY_BASIC_PRICE[3];
     }
 
     public void updateDataModel() {

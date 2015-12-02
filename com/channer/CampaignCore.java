@@ -96,6 +96,7 @@ public class CampaignCore {
             list.remove(campaign);
             myActiveCampaignIndexs.remove((Integer) campaign.id);
         }
+
         int length = list.size();
         int i, j;
         CampaignData tmp;
@@ -110,6 +111,8 @@ public class CampaignCore {
                     list.set(j, tmp);
                 }
             }
+        if (list.isEmpty())
+            return new AdxBidBundle();
         return marketModel.createBidBundle(list, today + 1);
     }
 

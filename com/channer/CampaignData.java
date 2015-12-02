@@ -1,11 +1,13 @@
 package com.channer;
 
+import com.channer.model.SegmentModel;
 import tau.tac.adx.demand.CampaignStats;
 import tau.tac.adx.props.AdxQuery;
 import tau.tac.adx.report.adn.MarketSegment;
 import tau.tac.adx.report.demand.CampaignOpportunityMessage;
 import tau.tac.adx.report.demand.InitialCampaignMessage;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -30,9 +32,13 @@ public class CampaignData {
     public double profitRatio;
     public double timePressure;
 
+    public double impressionNeedAvg;
+    public List<Integer> segments;
+
     public void updateRatio(int today) {
         timePressure = BidBundleUtil.calcuTimePressure(this, today);
         profitRatio = BidBundleUtil.calcuProfitRatio(this);
+        impressionNeedAvg = (double)impsTogo() / (double)(dayEnd-today+1);
     }
 
     public CampaignData(InitialCampaignMessage icm) {
@@ -40,6 +46,8 @@ public class CampaignData {
         dayStart = icm.getDayStart();
         dayEnd = icm.getDayEnd();
         targetSegment = icm.getTargetSegment();
+        segments = SegmentModel.mapMarketSegment(targetSegment);
+
         videoCoef = icm.getVideoCoef();
         mobileCoef = icm.getMobileCoef();
         id = icm.getId();
