@@ -115,6 +115,7 @@ public class MarketModel {
     }
 
     private int performanceCount;
+
     private double efficienceMeasureForOneSegment(double oneSegInBoard[], int length, int segIndex, List<CampaignData> list) {
         performanceCount++;
         int i;
@@ -224,6 +225,9 @@ public class MarketModel {
                                 }
                             if (benefit > 0) {
                                 board[bestIndex][i] += divide;
+                                // important, weight update
+                                boardBase[bestIndex][i] =
+                                        board[bestIndex][i] / (double) boardMark[bestIndex][i];
                                 board[j][numCam] = resE1;
                                 board[bestIndex][numCam] = resE2;
                                 boardMark[j][i]--;
@@ -368,11 +372,15 @@ public class MarketModel {
 
         // load
         double count = campaign.impsTogo();
-        count *= 1.5d;
+        double pressure = campaign.timePressure;
+        if (pressure > 2d)
+            pressure = 2d;
+        if (pressure < 0.5d)
+            pressure = 0.5d;
+        count *= 1.2d * pressure;
         for (int i = 0; i < pickChoices.size() && count > 0; i++) {
             count -= mQuerySpace[pickChoices.get(i)].population;
-            tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice *
-                    BidBundleUtil.calcuTimePressure(campaign, today - 1);
+            tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice * pressure;
             mQuerySpace[pickChoices.get(i)].externalMark = true;
             mQuerySpace[pickChoices.get(i)].updateDay = today;
             mQuerySpace[pickChoices.get(i)].bidPrice = tmpDouble;
@@ -384,7 +392,7 @@ public class MarketModel {
         }
 
         // limitation
-        double impressionLimit = campaign.impsTogo();
+        double impressionLimit = campaign.impsTogo() / (double) (campaign.dayEnd - today) * pressure;
         double budgetLimit = campaign.budget * 2;
         bundle.setCampaignDailyLimit(campaign.id,
                 (int) impressionLimit, budgetLimit);
