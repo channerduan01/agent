@@ -114,8 +114,9 @@ public class MarketModel {
         }
     }
 
+    private int performanceCount;
     private double efficienceMeasureForOneSegment(double oneSegInBoard[], int length, int segIndex, List<CampaignData> list) {
-
+        performanceCount++;
         int i;
         double mE = 0;
         double vE = 0;
@@ -143,16 +144,26 @@ public class MarketModel {
                 mCoreData[segIndex].p3 / vE * (1d - mR) * vR +
                 mCoreData[segIndex].p4 * (1d - mR) * (1d - vR);
 
-
-        System.out.println("!!!!!efficience:" + segIndex + "  " + meetR + " " + cost);
+//        System.out.print("!!!!!");
+//        for (i = 0; i < length; i++)
+//            System.out.print(oneSegInBoard[i] + ",");
+//        System.out.print("\n");
+//        System.out.println("!!!!!efficience:" + segIndex + "  " + sumImpSupply + " " +
+//                impRequire + " " + meetR + " " + cost + " " + (meetR / cost));
 
         return meetR / cost;
     }
+
+    private AdxBidBundle createBidBundleByBoard(double board[][]) {
+        return new AdxBidBundle();
+    }
+
 
     /*
         Core algorithm
      */
     public AdxBidBundle createBidBundle(List<CampaignData> list, int today) {
+        performanceCount = 0;
         int i, j, k;
         int numCam = list.size();
         System.out.println("!!!!!!!!!!!!!!Task division start!!!!!!!!!!!!!!");
@@ -160,7 +171,6 @@ public class MarketModel {
         for (i = 0; i <= mCoreData.length; i++)
             for (j = 0; j <= numCam; j++)
                 board[i][j] = 0;
-
         double tmpDouble;
         for (i = 0; i < numCam; i++) {
             tmpDouble = list.get(i).impsTogo() / list.get(i).segments.size();
@@ -170,47 +180,67 @@ public class MarketModel {
         }
         for (i = 0; i < mCoreData.length; i++)
             board[i][numCam] = efficienceMeasureForOneSegment(board[i], numCam, i, list);
-        System.out.println("test!!!!!!!!!!!!!!!!!!!!!!!!!");
         double divide;
         double benefit, resE1, resE2 = 0, oriE1, oriE2;
         int bestIndex = 0;
-//        for (i = 0; i < numCam; i++)
-//            if (board[mCoreData.length][i] > 1)
-//                for (j = 0; j < mCoreData.length - 1; j++)
-//                    if (board[j][i] > 0) {
-//                        System.out.println("test!!!!!! " + j + "--" + i);
-//                        divide = board[j][i] / 2;
-//                        board[j][i] -= divide;
-//                        oriE1 = board[j][numCam];
-//                        resE1 = efficienceMeasureForOneSegment(board[j], numCam, j, list);
-//                        benefit = 0;
-//                        for (k = j + 1; k < mCoreData.length; k++)
-//                            if (board[k][i] > 0) {
-//                                oriE2 = board[k][numCam];
-//                                board[k][i] += divide;
-//                                resE2 = efficienceMeasureForOneSegment(board[k], numCam, k, list);
-//                                tmpDouble = resE1 + resE2 - oriE1 - oriE2;
-//                                if (tmpDouble > benefit) {
-//                                    benefit = tmpDouble;
-//                                    bestIndex = k;
-//                                }
-//                                board[k][i] -= divide;
-//                            }
-//                        if (benefit > 0) {
-//                            board[bestIndex][i] -= divide;
-//                            board[j][numCam] = resE1;
-//                            board[bestIndex][numCam] = resE2;
-//                        } else
-//                            board[j][i] += divide;
-//                    }
+        int round = 5;  // core iterate number
+        int boardMark[][] = new int[mCoreData.length][numCam];
+        for (i = 0; i < mCoreData.length; i++)
+            for (j = 0; j < numCam; j++)
+                boardMark[i][j] = round;
+        double d_round = (double) round;
+        double boardBase[][] = new double[mCoreData.length][numCam];
+        for (i = 0; i < mCoreData.length; i++)
+            for (j = 0; j < numCam; j++)
+                boardBase[i][j] = board[i][j] / d_round;
+        for (; round > 0; round--)
+            for (i = 0; i < numCam; i++)
+                if (board[mCoreData.length][i] > 1)
+                    for (j = 0; j < mCoreData.length - 1; j++)
+                        if (board[j][i] > 0) {
+//                            System.out.println("test!!!!!! " + j + " for " + i + "[" + round + "]");
+                            for (int i1 = 0; i1 <= numCam; i1++) {
+                                for (int j1 = 0; j1 <= mCoreData.length; j1++)
+                                    System.out.print("" + board[j1][i1] + ",");
+                                System.out.print("\n");
+                            }
+                            divide = boardBase[j][i];
+                            board[j][i] -= divide;
+                            oriE1 = board[j][numCam];
+                            resE1 = efficienceMeasureForOneSegment(board[j], numCam, j, list);
+                            benefit = 0;
+                            for (k = j + 1; k < mCoreData.length; k++)
+                                if (board[k][i] > 0) {
+//                                    System.out.println("campare:" + j + "--" + k);
+                                    oriE2 = board[k][numCam];
+                                    board[k][i] += divide;
+                                    resE2 = efficienceMeasureForOneSegment(board[k], numCam, k, list);
+                                    tmpDouble = resE1 + resE2 - oriE1 - oriE2;
+                                    if (tmpDouble > benefit) {
+                                        benefit = tmpDouble;
+                                        bestIndex = k;
+                                    }
+                                    board[k][i] -= divide;
+                                }
+                            if (benefit > 0) {
+                                board[bestIndex][i] += divide;
+                                board[j][numCam] = resE1;
+                                board[bestIndex][numCam] = resE2;
+                                boardMark[j][i]--;
+                                if (boardMark[j][i] == 0)
+                                    board[j][i] = 0;
+                            } else
+                                board[j][i] += divide;
+                        }
 
-        for (i = 0;i <= numCam ;i++) {
+        for (i = 0; i <= numCam; i++) {
             for (j = 0; j <= mCoreData.length; j++)
                 System.out.print("" + board[j][i] + ",");
             System.out.print("\n");
         }
-        System.out.println("!!!!!!!!!!!!!!Task division end!!!!!!!!!!!!!!");
+        System.out.println("!!!!!!!!!!!!!!Task division end!!!!!!!!!!!!!! " + performanceCount);
 
+//        return createBidBundleByBoard(board);
 
         AdxBidBundle bidBundle = new AdxBidBundle();
         int size = mQuerySpace.length;
@@ -386,13 +416,12 @@ public class MarketModel {
     }
 
     /**
-     *
      * @param segments
      * @return total populations
      */
     public double calcuPopulations(Set<MarketSegment> segments) {
         double num = 0d;
-        for (Integer integer :SegmentModel.mapMarketSegment(segments)) num += mCoreData[integer].population;
+        for (Integer integer : SegmentModel.mapMarketSegment(segments)) num += mCoreData[integer].population;
         return num;
     }
 

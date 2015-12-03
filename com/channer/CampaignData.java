@@ -66,6 +66,7 @@ public class CampaignData {
         id = com.getId();
         reachImps = com.getReachImps();
         targetSegment = com.getTargetSegment();
+        segments = SegmentModel.mapMarketSegment(targetSegment);
         mobileCoef = com.getMobileCoef();
         videoCoef = com.getVideoCoef();
         stats = new CampaignStats(0, 0, 0);
