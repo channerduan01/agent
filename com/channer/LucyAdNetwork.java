@@ -238,7 +238,8 @@ public class LucyAdNetwork extends Agent {
 //		}
 
 		ucsBid = mCampaignCore.bidForUCS();
-
+		System.out.println("!!!!!!!!!! The updated bid for ucs submitting is: " + String.valueOf(ucsBid));
+		
 		/* Note: Campaign bid is in millis */
 		AdNetBidMessage bids = new AdNetBidMessage(ucsBid, pendingCampaign.id, cmpBidMillis);
 		sendMessage(demandAgentAddress, bids);
@@ -274,7 +275,7 @@ public class LucyAdNetwork extends Agent {
 		} else {
 			mCampaignCore.otherWonCampaign(pendingCampaign, notificationMessage.getWinner());
 		}
-		mCampaignCore.updateUCS(notificationMessage.getServiceLevel(), notificationMessage.getPrice());
+		mCampaignCore.updateUcs(notificationMessage.getServiceLevel(), notificationMessage.getPrice());
 		mCampaignCore.updateQuality(notificationMessage.getQualityScore());
 		System.out.println("Day " + day + ": " + campaignAllocatedTo
 				+ ". UCS Level set to " + notificationMessage.getServiceLevel()
@@ -325,12 +326,12 @@ public class LucyAdNetwork extends Agent {
 	 * Users and Publishers statistics: popularity and ad type orientation
 	 */
 	private void handleAdxPublisherReport(AdxPublisherReport adxPublisherReport) {
-//		System.out.println("Publishers Report: ");
-//		for (PublisherCatalogEntry publisherKey : adxPublisherReport.keys()) {
-//			AdxPublisherReportEntry entry = adxPublisherReport
-//					.getEntry(publisherKey);
-//			System.out.println(entry.toString());
-//		}
+		System.out.println("Publishers Report: ");
+		for (PublisherCatalogEntry publisherKey : adxPublisherReport.keys()) {
+			AdxPublisherReportEntry entry = adxPublisherReport
+					.getEntry(publisherKey);
+			System.out.println(entry.toString());
+		}
 		mCampaignCore.updatePublsers(adxPublisherReport);
 	}
 
