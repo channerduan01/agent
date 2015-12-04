@@ -37,17 +37,17 @@ public class SegmentModel {
 
     public static int mapSingleMarketSegment(Age age, Income income, Gender gender) {
         int res = 0;
-        if(gender == Gender.male) {
+        if (gender == Gender.male) {
             res += 0;
         } else {
             res += 1;
         }
-        if(income == Income.low || income == Income.medium) {
+        if (income == Income.low || income == Income.medium) {
             res += 0;
         } else {
             res += 2;
         }
-        if(age == Age.Age_18_24 || age == Age.Age_25_34 || age == Age.Age_35_44) {
+        if (age == Age.Age_18_24 || age == Age.Age_25_34 || age == Age.Age_35_44) {
             res += 0;
         } else {
             res += 4;
@@ -119,7 +119,7 @@ public class SegmentModel {
     public List<CampaignPressureModel> campaignPressurs = new ArrayList<>();
 
     public double p1, p2, p3, p4;
-    private static final double QUERY_BASIC_PRICE[] = {0.02, 0.035, 0.035, 0.05};
+    private static final double QUERY_BASIC_PRICE[] = {500, 0.035, 0.035, 0.02};
 
     public SegmentModel(int index, List<MarketFragmentModel> fragments) {
         campaignPressurs.clear();
@@ -188,6 +188,36 @@ public class SegmentModel {
         }
         return require;
     }
+
+    public double populationToughPressure = 0d;
+
+    public void updatePressurePrediction() {
+        double[] factors = calcuAvgEffectFactors();
+        double populationPressure = factors[0];
+        if (populationPressure != 0) {
+            populationPressure /= impTransFactor(avgMRatio, factors[1], avgVRatio, factors[2]);
+        }
+        double ratio = populationPressure / population;
+        if (ratio > 1d) ratio = 1d;
+        populationToughPressure = 0.5d * ratio;
+    }
+
+    private double[] calcuAvgEffectFactors() {
+        double imp = 0;
+        for (CampaignPressureModel pressure : campaignPressurs)
+            if (pressure.trackModel.property == CampaignTrackModel.WON_OTHERS)
+                imp += pressure.impression;
+        double[] res = new double[3];
+        res[0] = imp;
+        res[1] = res[2] = 0;
+        for (CampaignPressureModel pressure : campaignPressurs)
+            if (pressure.trackModel.property == CampaignTrackModel.WON_OTHERS) {
+                res[1] += pressure.impression / imp * pressure.mEffect;
+                res[2] += pressure.impression / imp * pressure.vEffect;
+            }
+        return res;
+    }
+
 
     @Override
     public String toString() {

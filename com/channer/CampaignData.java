@@ -30,7 +30,7 @@ public class CampaignData {
 
     /* Special ratio */
     public double profitRatio;
-    public double timePressure;
+    public double timePressure = 1d;
 
     public double impressionNeedAvg;
     public List<Integer> segments;
@@ -38,7 +38,7 @@ public class CampaignData {
     public void updateRatio(int today) {
         timePressure = BidBundleUtil.calcuTimePressure(this, today);
         profitRatio = BidBundleUtil.calcuProfitRatio(this);
-        impressionNeedAvg = (double)impsTogo() / (double)(dayEnd-today+1);
+        impressionNeedAvg = (double) impsTogo() / (double) (dayEnd - today + 1);
     }
 
     public CampaignData(InitialCampaignMessage icm) {
@@ -76,13 +76,17 @@ public class CampaignData {
     @Override
     public String toString() {
         return "Campaign ID " + id + ": " + " " + dayStart + "-"
-                + dayEnd + " " + targetSegment + ", reach: " + stats.getTargetedImps()+ "/" +reachImps
+                + dayEnd + " " + targetSegment + ", reach: " + stats.getTargetedImps() + "/" + reachImps
                 + " pressure:" + timePressure + " pRatio:" + profitRatio
                 + " coefs: (v=" + videoCoef + ", m=" + mobileCoef + ")";
     }
 
     public int impsTogo() {
         return (int) Math.max(0, reachImps - stats.getTargetedImps());
+    }
+
+    public double impsTogoPerDay(int bidday) {
+        return Math.max(0, reachImps - stats.getTargetedImps()) / (double) (dayEnd - bidday + 1);
     }
 
     public void setStats(CampaignStats s) {
