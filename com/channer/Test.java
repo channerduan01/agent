@@ -31,6 +31,13 @@ public class Test {
 //
 //        if (1 == 1) return;
 
+//        System.out.println("" + BidBundleUtil.calcuCoefOfMeet(0.22));
+//        System.out.println("" + BidBundleUtil.calcuCoefOfMeet(0.29));
+//
+//        System.out.println("" + BidBundleUtil.calcuCoefOfMeet(1d));
+//        System.out.println("" + BidBundleUtil.calcuCoefOfMeet(2d));
+//        System.out.println("" + BidBundleUtil.calcuCoefOfMeet(3d));
+
         System.out.println("Hello channer!");
         try {
             tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-1.conf"});

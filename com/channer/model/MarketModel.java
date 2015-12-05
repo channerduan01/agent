@@ -114,75 +114,178 @@ public class MarketModel {
         }
     }
 
-    private int performanceCount;
 
-    private double efficienceMeasureForOneSegment(double oneSegInBoard[], int length, int segIndex, List<CampaignData> list) {
+    private void printBoard(double board[][], int numCam, List<CampaignData> list) {
+        for (int i1 = 0; i1 <= numCam + 1; i1++) {
+            if (i1 == numCam)
+                System.out.print("m: ");
+            else if (i1 == numCam + 1)
+                System.out.print("c: ");
+            else
+                System.out.print("" + list.get(i1).id + "-" + i1 + ": ");
+            for (int j1 = 0; j1 <= mCoreData.length; j1++)
+                System.out.print("" + board[j1][i1] + ",");
+            System.out.print("\n");
+        }
+        System.out.print("e: ");
+        double tmpDouble;
+        for (int j1 = 0; j1 <= mCoreData.length; j1++) {
+            tmpDouble = efficienceMeasure(board, j1, numCam, list);
+            System.out.print("" + tmpDouble + ",");
+        }
+        System.out.print("\n");
+    }
+
+    private AdxBidBundle createBidBundleByBoard(double board[][], List<CampaignData> list, int numCam, int bidday) {
+        BidRecordModel model = new BidRecordModel(bidday, list, mCoreData.length, 4);
+        int i, j;
+        double impRequire = 0;
+        for (i = 0; i < mCoreData.length; i++) {
+            if (board[i][numCam] != 0) {
+                for (j = 0; j < numCam; j++) {
+                    impRequire += board[i][j];
+                }
+                double mE = 0;
+                double mR = mCoreData[i].avgMRatio;
+                double vE = 0;
+                double vR = mCoreData[i].avgVRatio;
+                for (j = 0; j < numCam; j++) {
+                    if (board[i][j] != 0) {
+                        mE += board[i][j] / impRequire * list.get(j).mobileCoef;
+                        vE += board[i][j] / impRequire * list.get(j).videoCoef;
+                    }
+                }
+                double ratio = impRequire / (mCoreData[i].population * SegmentModel.impTransFactor(mR, mE, vR, vE));
+                for (j = 0; j < numCam; j++) {
+                    if (board[i][j] != 0) {
+                        model.add(list.get(j), i, board[i][numCam], ratio, mE, vE, mCoreData[i]);
+                    }
+                }
+            }
+        }
+        model.print();
+        return model.createBundle(list, mQuerySpace, mPublisherModel.mPublisers.length, board);
+    }
+
+    private int performanceCount;
+    private double efficienceMeasure(double board[][], int segIndex, int numCam,
+                                     List<CampaignData> list) {
         performanceCount++;
+        int i;
+        double imp = 0;
+        for (i = 0; i < numCam; i++) {
+            imp += board[segIndex][i];
+        }
+//        double timePressure = 0;
+//        for (i = 0; i < numCam; i++) {
+//            if (board[segIndex][i] != 0)
+//                timePressure += board[segIndex][i] / imp * list.get(i).timePressure;
+//        }
+
+        double finalCost = imp * board[segIndex][numCam + 1] * board[segIndex][numCam];
+        return finalCost;
+    }
+
+    private double[] efficiencePredictAssist(double board[][], int segIndex1, int segIndex2, int numCam,
+                                             List<CampaignData> list) {
+        double newFactors1[] = calcuMeetAndCost(board[segIndex1], numCam, segIndex1, list);
+        double newFactors2[] = calcuMeetAndCost(board[segIndex2], numCam, segIndex2, list);
+        double save[] = {board[segIndex1][numCam], board[segIndex1][numCam + 1],
+                board[segIndex2][numCam], board[segIndex2][numCam + 1]};
+        board[segIndex1][numCam] = newFactors1[0];
+        board[segIndex1][numCam + 1] = newFactors1[1];
+        board[segIndex2][numCam] = newFactors2[0];
+        board[segIndex2][numCam + 1] = newFactors2[1];
+        double res[] = new double[2];
+        res[0] = efficienceMeasure(board, segIndex1, numCam, list);
+        res[1] = efficienceMeasure(board, segIndex2, numCam, list);
+        board[segIndex1][numCam] = save[0];
+        board[segIndex1][numCam + 1] = save[1];
+        board[segIndex2][numCam] = save[2];
+        board[segIndex2][numCam + 1] = save[3];
+        return res;
+    }
+
+
+    private double[] calcuMeetAndCost(double oneSegInBoard[], int length, int segIndex,
+                                      List<CampaignData> list) {
         int i;
         double mE = 0;
         double vE = 0;
         double mR = mCoreData[segIndex].avgMRatio;
         double vR = mCoreData[segIndex].avgVRatio;
         double impRequire = 0;
-
         for (i = 0; i < length; i++)
             impRequire += oneSegInBoard[i];
-        if (impRequire == 0)
-            return 0;
-        for (i = 0; i < length; i++)
-            if (oneSegInBoard[i] != 0) {
-                mE += oneSegInBoard[i] / impRequire * list.get(i).mobileCoef;
-                vE += oneSegInBoard[i] / impRequire * list.get(i).videoCoef;
-            }
-
-        double sumImpSupply = mCoreData[segIndex].population * SegmentModel.impTransFactor(
-                mR, mE, vR, vE);
-
-        double meetR = sumImpSupply / impRequire;
-
-        double cost = mCoreData[segIndex].p1 / (mE * vE) * mR * vR +
-                mCoreData[segIndex].p2 / mE * mR * (1d - vR) +
-                mCoreData[segIndex].p3 / vE * (1d - mR) * vR +
-                mCoreData[segIndex].p4 * (1d - mR) * (1d - vR);
-
-//        System.out.print("!!!!!");
-//        for (i = 0; i < length; i++)
-//            System.out.print(oneSegInBoard[i] + ",");
-//        System.out.print("\n");
-//        System.out.println("!!!!!efficience:" + segIndex + "  " + sumImpSupply + " " +
-//                impRequire + " " + meetR + " " + cost + " " + (meetR / cost));
-
-        return meetR / cost;
+        double meet = 0;
+        double cost = 0;
+        if (impRequire != 0) {
+//            System.out.println("cost pre:");
+            for (i = 0; i < length; i++)
+                if (oneSegInBoard[i] != 0) {
+                    mE += oneSegInBoard[i] / impRequire * list.get(i).mobileCoef;
+                    vE += oneSegInBoard[i] / impRequire * list.get(i).videoCoef;
+//                    System.out.print(+oneSegInBoard[i] / impRequire
+//                            + " " + mE + "," + vE + " ");
+                }
+            double sumImpSupply = mCoreData[segIndex].population
+                    * (1d - mCoreData[segIndex].populationToughPressure)
+                    * SegmentModel.impTransFactor(mR, mE, vR, vE);
+            meet = sumImpSupply / impRequire;
+            meet = BidBundleUtil.calcuCoefOfMeet(meet);
+            System.out.println("!!! sumImp-" + sumImpSupply
+                            + " require-" + impRequire
+                            + " meet-" + (sumImpSupply / impRequire)
+                            + " meet2-" + meet
+                            + "  pressure-" + mCoreData[segIndex].populationToughPressure
+            );
+            cost = mCoreData[segIndex].p1 / (mE * vE) * mR * vR +
+                    mCoreData[segIndex].p2 / mE * mR * (1d - vR) +
+                    mCoreData[segIndex].p3 / vE * (1d - mR) * vR +
+                    mCoreData[segIndex].p4 * (1d - mR) * (1d - vR);
+//            System.out.println("     " + cost);
+        }
+        double res[] = new double[2];
+        res[0] = meet;
+        res[1] = cost;
+        return res;
     }
 
-    private AdxBidBundle createBidBundleByBoard(double board[][]) {
-        return new AdxBidBundle();
+    public AdxBidBundle createBidBundle(List<CampaignData> list, int bidday) {
+        int i;
+        AdxBidBundle bidBundle = new AdxBidBundle();
+        int size = mQuerySpace.length;
+        for (i = 0; i < size; i++) mQuerySpace[i].externalMark = false;
+        for (CampaignData campaignData : list) {
+            buildQueryForCampaign(bidBundle, campaignData, bidday);
+        }
+        return bidBundle;
     }
 
-
-    /*
-        Core algorithm
-     */
-    public AdxBidBundle createBidBundle(List<CampaignData> list, int today) {
-        performanceCount = 0;
+    public AdxBidBundle createBidBundleNew(List<CampaignData> list, int bidday) {
         int i, j, k;
         int numCam = list.size();
         System.out.println("!!!!!!!!!!!!!!Task division start!!!!!!!!!!!!!!");
-        double board[][] = new double[mCoreData.length + 1][numCam + 1];
+        double board[][] = new double[mCoreData.length + 1][numCam + 2];
         for (i = 0; i <= mCoreData.length; i++)
             for (j = 0; j <= numCam; j++)
                 board[i][j] = 0;
         double tmpDouble;
         for (i = 0; i < numCam; i++) {
-            tmpDouble = list.get(i).impsTogo() / list.get(i).segments.size();
+            tmpDouble = list.get(i).impsTogoPerDay(bidday) / list.get(i).segments.size() *
+                    list.get(i).timePressure;
             board[mCoreData.length][i] = list.get(i).segments.size();
             for (int segMark : list.get(i).segments)
                 board[segMark][i] = tmpDouble;
         }
-        for (i = 0; i < mCoreData.length; i++)
-            board[i][numCam] = efficienceMeasureForOneSegment(board[i], numCam, i, list);
+        double[] tmpDoubleArray;
+        for (i = 0; i < mCoreData.length; i++) {
+            tmpDoubleArray = calcuMeetAndCost(board[i], numCam, i, list);
+            board[i][numCam] = tmpDoubleArray[0];
+            board[i][numCam + 1] = tmpDoubleArray[1];
+        }
         double divide;
-        double benefit, resE1, resE2 = 0, oriE1, oriE2;
+        double benefit, resE1 = 0, resE2 = 0, oriE1, oriE2;
         int bestIndex = 0;
         int round = 5;  // core iterate number
         int boardMark[][] = new int[mCoreData.length][numCam];
@@ -194,29 +297,37 @@ public class MarketModel {
         for (i = 0; i < mCoreData.length; i++)
             for (j = 0; j < numCam; j++)
                 boardBase[i][j] = board[i][j] / d_round;
-        for (; round > 0; round--)
+        int moves = 1;
+        for (; round > 0 && moves > 0; round--) {
+            moves = 0;
             for (i = 0; i < numCam; i++)
                 if (board[mCoreData.length][i] > 1)
                     for (j = 0; j < mCoreData.length - 1; j++)
                         if (board[j][i] > 0) {
-//                            System.out.println("test!!!!!! " + j + " for " + i + "[" + round + "]");
-                            for (int i1 = 0; i1 <= numCam; i1++) {
-                                for (int j1 = 0; j1 <= mCoreData.length; j1++)
-                                    System.out.print("" + board[j1][i1] + ",");
-                                System.out.print("\n");
-                            }
+                            System.out.println("test!!!!!! " + j + " for " + i + "[" + round + "]");
+                            printBoard(board, numCam, list);
+                            oriE1 = efficienceMeasure(board, j, numCam, list);
                             divide = boardBase[j][i];
                             board[j][i] -= divide;
-                            oriE1 = board[j][numCam];
-                            resE1 = efficienceMeasureForOneSegment(board[j], numCam, j, list);
+                            if (boardMark[j][i] == 1)
+                                board[j][i] = 0;
                             benefit = 0;
-                            for (k = j + 1; k < mCoreData.length; k++)
-                                if (board[k][i] > 0) {
-//                                    System.out.println("campare:" + j + "--" + k);
-                                    oriE2 = board[k][numCam];
+                            for (k = 0; k < mCoreData.length; k++)
+                                if (k != j && board[k][i] > 0) {
+                                    System.out.println("campare:" + j + "--" + k);
+                                    oriE2 = efficienceMeasure(board, k, numCam, list);
                                     board[k][i] += divide;
-                                    resE2 = efficienceMeasureForOneSegment(board[k], numCam, k, list);
-                                    tmpDouble = resE1 + resE2 - oriE1 - oriE2;
+                                    tmpDoubleArray = efficiencePredictAssist(board, j, k, numCam, list);
+                                    resE1 = tmpDoubleArray[0];
+                                    resE2 = tmpDoubleArray[1];
+                                    tmpDouble = oriE1 + oriE2 - resE1 - resE2;
+                                    System.out.println(
+                                            " oriE1:" + oriE1
+                                                    + " oriE2:" + oriE2
+                                                    + " resE1:" + resE1
+                                                    + " resE2:" + resE2
+                                                    + " gradient:" + tmpDouble
+                                    );
                                     if (tmpDouble > benefit) {
                                         benefit = tmpDouble;
                                         bestIndex = k;
@@ -231,31 +342,37 @@ public class MarketModel {
                                 board[j][numCam] = resE1;
                                 board[bestIndex][numCam] = resE2;
                                 boardMark[j][i]--;
-                                if (boardMark[j][i] == 0)
+                                if (boardMark[j][i] == 0) {
                                     board[j][i] = 0;
+                                    board[mCoreData.length][i]--;
+                                }
+                                tmpDoubleArray = calcuMeetAndCost(board[j], numCam, j, list);
+                                board[j][numCam] = tmpDoubleArray[0];
+                                board[j][numCam + 1] = tmpDoubleArray[1];
+                                tmpDoubleArray = calcuMeetAndCost(board[bestIndex], numCam, bestIndex, list);
+                                board[bestIndex][numCam] = tmpDoubleArray[0];
+                                board[bestIndex][numCam + 1] = tmpDoubleArray[1];
+                                moves++;
                             } else
                                 board[j][i] += divide;
                         }
-
-        for (i = 0; i <= numCam; i++) {
-            for (j = 0; j <= mCoreData.length; j++)
-                System.out.print("" + board[j][i] + ",");
-            System.out.print("\n");
         }
-        System.out.println("!!!!!!!!!!!!!!Task division end!!!!!!!!!!!!!! " + performanceCount);
 
-//        return createBidBundleByBoard(board);
+        System.out.println("!!!!!!!!!!!!!!Task division end!!!!!!!!!!!!!! " + performanceCount);
+        printBoard(board, numCam, list);
+        createBidBundleByBoard(board, list, numCam, bidday);
+
 
         AdxBidBundle bidBundle = new AdxBidBundle();
         int size = mQuerySpace.length;
         for (i = 0; i < size; i++) mQuerySpace[i].externalMark = false;
         for (CampaignData campaignData : list) {
-            buildQueryForCampaign(bidBundle, campaignData, today);
+            buildQueryForCampaign(bidBundle, campaignData, bidday);
         }
         return bidBundle;
     }
 
-    public void bidBundleFeedback(AdNetworkReport report, int today) {
+    public void bidBundleFeedbackNew(AdNetworkReport report, int today) {
         double cost = 0d;
         int numberOfZero = 0;
         int numberOfOne = 0;
@@ -320,7 +437,72 @@ public class MarketModel {
         }
     }
 
-    private void buildQueryForCampaign(AdxBidBundle bundle, CampaignData campaign, int today) {
+    public void bidBundleFeedback(AdNetworkReport report, int today) {
+        double cost = 0d;
+        int numberOfZero = 0;
+        int numberOfOne = 0;
+        Set<AdNetworkKey> keySet = report.keys();
+        AdNetworkReportEntry entry;
+        for (AdNetworkKey key : keySet) {
+//            System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
+            cost += report.getAdNetworkReportEntry(key).getCost();
+            entry = report.getAdNetworkReportEntry(key);
+
+            int segMark = SegmentModel.mapSingleMarketSegment(key.getAge(), key.getIncome(), key.getGender());
+            boolean isM = key.getDevice() == Device.mobile;
+            boolean isV = key.getAdType() == AdType.video;
+            int publisherIndex = mPublisherModel.getPublisherIndex(key.getPublisher());
+            int channel;
+            if (isM && isV) channel = 0;
+            else if (isM) channel = 1;
+            else if (isV) channel = 2;
+            else channel = 3;
+            int publisherChannelSize = mPublisherModel.mPublisers.length * 4;
+            int index = segMark * publisherChannelSize + publisherIndex * 4 + channel;
+
+            double winRatio = (double) entry.getWinCount() / (double) entry.getBidCount();
+//            System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
+
+            if (winRatio == 1) {
+                mQuerySpace[index].bidPrice /= 1.2d;
+                numberOfOne++;
+                mQuerySpace[index].numReduce++;
+            } else if (winRatio == 0) {
+                mQuerySpace[index].bidPrice *= 1.2d;
+                numberOfZero++;
+                mQuerySpace[index].numAdd++;
+            } else {
+                mQuerySpace[index].bidPrice =
+                        mQuerySpace[index].bidPrice * (1d + 0.2d * (0.8d - winRatio));
+            }
+        }
+        System.out.println("!!!!!!!!!!! total cost !!!!!!!!!!!!  " + cost);
+
+        double ratioOfOne = (double) numberOfOne / (double) keySet.size();
+        double ratioOfZero = (double) numberOfZero / (double) keySet.size();
+
+        double redress = 1d;
+        if (ratioOfOne > 0.92d) {
+            redress = 0.6d;
+        } else if (ratioOfZero > 0.92d) {
+            redress = 2d;
+        }
+
+        if (redress != 1d) {
+            System.out.println("!!!!!!!!!!! redress !!!!!!!!!!!!  " + redress);
+            int size = mQuerySpace.length;
+            for (int i = 0; i < size; i++) {
+                mQuerySpace[i].bidPrice *= redress;
+                if (redress > 1)
+                    mQuerySpace[i].numRedressAdd++;
+                else
+                    mQuerySpace[i].numRedressReduce++;
+                mQuerySpace[i].updateDay = today;
+            }
+        }
+    }
+
+    private void buildQueryForCampaign(AdxBidBundle bundle, CampaignData campaign, int bidday) {
         List<Integer> segMarks = SegmentModel.mapMarketSegment(campaign.targetSegment);
         List<Integer> pickChoices = new ArrayList<>();
         List<Double> prices = new ArrayList<>();
@@ -339,13 +521,13 @@ public class MarketModel {
                 if (!mQuerySpace[tmpInt].externalMark) {
                     pickChoices.add(tmpInt);
                     switch (tmpInt % 4) {
-                        case 1:
+                        case 0:
                             prices.add(mQuerySpace[tmpInt].population * m * v / mQuerySpace[tmpInt].bidPrice);
                             break;
-                        case 2:
+                        case 1:
                             prices.add(mQuerySpace[tmpInt].population * m / mQuerySpace[tmpInt].bidPrice);
                             break;
-                        case 3:
+                        case 2:
                             prices.add(mQuerySpace[tmpInt].population * v / mQuerySpace[tmpInt].bidPrice);
                             break;
                         default:
@@ -373,16 +555,12 @@ public class MarketModel {
         // load
         double count = campaign.impsTogo();
         double pressure = campaign.timePressure;
-        if (pressure > 2d)
-            pressure = 2d;
-        if (pressure < 0.5d)
-            pressure = 0.5d;
         count *= 1.2d * pressure;
         for (int i = 0; i < pickChoices.size() && count > 0; i++) {
             count -= mQuerySpace[pickChoices.get(i)].population;
             tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice * pressure;
             mQuerySpace[pickChoices.get(i)].externalMark = true;
-            mQuerySpace[pickChoices.get(i)].updateDay = today;
+            mQuerySpace[pickChoices.get(i)].updateDay = bidday;
             mQuerySpace[pickChoices.get(i)].bidPrice = tmpDouble;
             // test
 //            tmpDouble = m * v * 0.1d;
@@ -392,7 +570,7 @@ public class MarketModel {
         }
 
         // limitation
-        double impressionLimit = campaign.impsTogo() / (double) (campaign.dayEnd - today) * pressure;
+        double impressionLimit = campaign.impsTogo() / (double) (campaign.dayEnd - bidday + 1) * pressure;
         double budgetLimit = campaign.budget * 2;
         bundle.setCampaignDailyLimit(campaign.id,
                 (int) impressionLimit, budgetLimit);
@@ -464,6 +642,12 @@ public class MarketModel {
         int size = mQuerySpace.length;
         for (int i = 0; i < size; i++) {
             mQuerySpace[i].decay(today);
+        }
+    }
+
+    public void updatePressModel() {
+        for (SegmentModel model : mCoreData) {
+            model.updatePressurePrediction();
         }
     }
 

@@ -80,13 +80,36 @@ public class CampaignCore {
         return cmpBidMillis;
     }
 
-    private double bidUcsDefault = 0.12d;
-    private boolean shouldBid = true;
+//    private double bidUcsDefault = 0.12d;
+//    private boolean shouldBid = true;
+//
+//    public double bidForUCS() {
+//        if (!shouldBid) return 0;
+//        return bidUcsDefault;
+//    }
 
-    public double bidForUCS() {
-        if (!shouldBid) return 0;
-        return bidUcsDefault;
-    }
+//    public void updateUCS(double level, double cost) {
+//        boolean isNeed = false;
+//        for (Integer integer : myActiveCampaignIndexs) {
+//            if (myCampaigns.get(integer).dayStart <= today + 1 &&
+//                    myCampaigns.get(integer).dayEnd > today + 1) {
+//                isNeed = true;
+//                break;
+//            }
+//        }
+//        if (!isNeed && today > 1) {
+//            shouldBid = false;
+//            return;
+//        } else
+//            shouldBid = true;
+//
+//        ucsBid = level;
+//        if (ucsBid < 0.78d) {
+//            bidUcsDefault = bidUcsDefault * 1.2d;
+//        } else {
+//            bidUcsDefault = bidUcsDefault / 1.2d;
+//        }
+//    }
 
     public AdxBidBundle bidForExchangeX() {
         List<CampaignData> list = getNextDayActiveCampaign();
@@ -180,29 +203,6 @@ public class CampaignCore {
         }
     }
 
-    public void updateUCS(double level, double cost) {
-        boolean isNeed = false;
-        for (Integer integer : myActiveCampaignIndexs) {
-            if (myCampaigns.get(integer).dayStart <= today + 1 &&
-                    myCampaigns.get(integer).dayEnd > today + 1) {
-                isNeed = true;
-                break;
-            }
-        }
-        if (!isNeed && today > 1) {
-            shouldBid = false;
-            return;
-        } else
-            shouldBid = true;
-
-        ucsBid = level;
-        if (ucsBid < 0.78d) {
-            bidUcsDefault = bidUcsDefault * 1.2d;
-        } else {
-            bidUcsDefault = bidUcsDefault / 1.2d;
-        }
-    }
-
     public void updateQuality(double q) {
         quality = q;
     }
@@ -217,6 +217,7 @@ public class CampaignCore {
             }
         }
         myActiveCampaignIndexs.removeAll(removeList);
+        marketModel.updatePressModel();
 
         // output all the data finally
         if (today >= 60) {
@@ -242,10 +243,186 @@ public class CampaignCore {
         today = 0;
         myCampaigns = new HashMap<>();
         myActiveCampaignIndexs.clear();
+
+        //=========================== UCS lewis
+        ucsIndexs.clear();
+        levelUpCostMargin = BidForUcsUtil.calcuMarginUcsLevelUp();
     }
 
     public void updatePublsers(AdxPublisherReport report) {
         marketModel.updateByPublisherReport(report);
 //        marketModel.printCore();
     }
+
+
+
+
+
+    //=================================
+    /**
+     * @author Lewis
+     *
+     */
+
+    private double bidUcsDefault = 0.12d;
+    private boolean shouldBid = false;
+    private double aveImpPredictCost = 3.065619492584309E-4d;
+    private double pastTrustRate = 0.4d;
+    private List<UcsLevelCost> ulc = new ArrayList<UcsLevelCost> ();
+    private Map<Integer, Double> levelUpCostMargin;
+    private List<Integer> ucsIndexs = new ArrayList<>();
+
+
+    public double bidForUCS() {
+        if (!shouldBid)
+            return 0;
+        return bidUcsDefault;
+    }
+
+    public void updateUCS(double level, double cost) {
+        ulc.add(new UcsLevelCost(level, cost));
+
+        // get my tomorrows active campaign index
+        ucsIndexs = getNextDayActiveCampaignIndex();
+
+        // check if should bid for tomorrows ucs
+        if (ucsIndexs.isEmpty() || today < 1d){
+            shouldBid = false;
+            System.out.println("No need bid for tomorrow's UCS.");
+            return;
+        } else {
+            System.out.println("The number of my tomorrow's active Campaigns is: "
+                    + String.valueOf(ucsIndexs.size()));
+            shouldBid = true;
+        }
+
+        // if yes, check ucs level.
+        // if > 0.9 then bid reduce.
+        double alpha = 1.4d;
+        double reducedReate = 1.3d;
+        if (level > 0.9d){
+            bidUcsDefault /=  reducedReate;
+        }
+
+        // if < 0.78, then bid increase but no more than upper bound
+        double[] aveImpCost;
+        double[] aveImpTogo;
+
+        aveImpCost = calcuAveImpCost(pastTrustRate);
+        aveImpTogo = calcuAveImpTogo();
+
+        double timePressure = calcuTimePressureSum();
+        if ((level < 0.78d && isUcsUpWorthy(aveImpCost, aveImpTogo, level))
+                || (level < 0.78d && timePressure > 1d)){
+            bidUcsDefault = bidUcsDefault * alpha * (0.4d + 0.6d * timePressure);
+        }
+    }
+
+    private List<Integer> getNextDayActiveCampaignIndex() {
+        int day = today + 1;
+        List<Integer> list = new ArrayList<>();
+        CampaignData tmp;
+        for (Integer integer : myActiveCampaignIndexs) {
+            tmp = myCampaigns.get(integer);
+            if (tmp.dayStart <= day && tmp.dayEnd >= day && tmp.impsTogo() > 0) {
+                list.add(integer);
+            }
+        }
+        return list;
+    }
+
+    public boolean isUcsUpWorthy(double[] aveImpCost, double[] aveImpTogo, double level) {
+        double relativeLost;
+        int adjustedLevel = adjustLevel(level);
+
+        if (level == 1.0d){
+            return false;
+        }
+
+        switch(ucsIndexs.size()){
+            case 1:
+                relativeLost = (3d / 20d) * aveImpCost[0] * aveImpTogo[0];
+                //test
+                System.out.println("!!!!!!!!!!myactivecampaigns:" + String.valueOf(ucsIndexs.size()) + "!!!!!relativeLost: " + String.valueOf(relativeLost));
+                if (relativeLost > levelUpCostMargin.get(adjustedLevel)) return true;
+                else return false;
+            case 2:
+                double higherCost = Math.max(aveImpCost[0], aveImpCost[1]);
+                relativeLost = (3d / 10d) * higherCost * (Math.pow(aveImpTogo[0], 2) + Math.pow(aveImpTogo[1], 2))
+                        / (aveImpTogo[0] + aveImpTogo[1]);
+                //test
+                System.out.println("!!!!!!!!!!myactivecampaigns:" + String.valueOf(ucsIndexs.size()) + "!!!!!relativeLost: " + String.valueOf(relativeLost));
+                if (relativeLost > levelUpCostMargin.get(adjustedLevel)) return true;
+                else return false;
+            default:
+                higherCost = Math.max(aveImpCost[0], aveImpCost[1]);
+                higherCost = Math.max(higherCost, aveImpCost[2]);
+                relativeLost = (9d / 20d) * higherCost
+                        * (Math.pow(aveImpTogo[0], 2) + Math.pow(aveImpTogo[1], 2) + Math.pow(aveImpTogo[2], 2))
+                        / ((aveImpTogo[0] + aveImpTogo[1]) + aveImpTogo[2]);
+                //test
+                System.out.println("!!!!!!!!!!myactivecampaigns:" + String.valueOf(ucsIndexs.size()) + "!!!!!relativeLost: " + String.valueOf(relativeLost));
+                if (relativeLost > levelUpCostMargin.get(adjustedLevel)) return true;
+                else return false;
+        }
+    }
+
+    private int adjustLevel(double level) {
+        int temp = (int) Math.round(level * 100d);
+        return temp;
+    }
+
+    private double[] calcuAveImpCost(double pastTrustRate) {
+        double[] aveImpCost = new double[ucsIndexs.size()];
+        int count = 0;
+        double aveImpPastCost;
+        for (Integer integer : ucsIndexs){
+            if (checkPastExist(integer)){
+                aveImpPastCost = myCampaigns.get(integer).stats.getCost() / myCampaigns.get(integer).stats.getTargetedImps();
+                aveImpCost[count] = (1-pastTrustRate) * aveImpPredictCost + pastTrustRate * aveImpPastCost;
+            } else {
+                aveImpCost[count] = aveImpPredictCost;
+            }
+            System.out.println("!!!!!!!!!!!! Campaign id:" + String.valueOf(integer) + ", AveImpCost: "
+                    + String.valueOf(aveImpCost[count]));
+            count++;
+        }
+        return aveImpCost;
+    }
+
+    private boolean checkPastExist(Integer integer) {
+        if (myCampaigns.get(integer).stats.getCost() == 0d){
+            System.out.println("!!!!!!!!!!!! Stats.getCost: "
+                    + String.valueOf(myCampaigns.get(integer).stats.getCost()));
+            return false;
+        } else {
+            System.out.println("!!!!!!!!!!!! Stats.getCost: "
+                    + String.valueOf(myCampaigns.get(integer).stats.getCost()));
+            return true;
+        }
+
+    }
+    private double[] calcuAveImpTogo() {
+        double[] aveImpTogo = new double[ucsIndexs.size()];
+        double contractLength;
+        int count = 0;
+        for (Integer integer : ucsIndexs){
+            contractLength = myCampaigns.get(integer).dayEnd - myCampaigns.get(integer).dayStart + 1d;
+            aveImpTogo[count] = myCampaigns.get(integer).reachImps /contractLength;
+            System.out.println("!!!!!!!!!!!! Campaign id:" + String.valueOf(integer) + ", AveImpTogo: "
+                    + String.valueOf(aveImpTogo[count]));
+            count++;
+        }
+
+        return aveImpTogo;
+    }
+
+    private double calcuTimePressureSum() {
+        double timePressureSum = 0;
+        for (Integer integer : ucsIndexs){
+            timePressureSum += myCampaigns.get(integer).timePressure;
+        }
+        return timePressureSum;
+    }
+
 }
