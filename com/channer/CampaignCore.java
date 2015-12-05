@@ -63,7 +63,7 @@ public class CampaignCore {
         long upper = CampaignBidUtil.getCamBidUpperBound(com.reachImps, quality);
         long bottom = CampaignBidUtil.getCamBidBottomBound(com.reachImps, quality);
         double range = upper - bottom;
-
+        double dens = CampaignBidUtil.classifyCampaign(com.dayEnd-com.dayStart+1, com.reachImps, marketModel.calcuPopulations(com.targetSegment));
 
         double emptyRatio = 1.0d - evaluate.pressurePreRatio - evaluate.requireRatio;
         isDesire = false;
@@ -71,7 +71,7 @@ public class CampaignCore {
             cmpBidMillis = upper;
         } else {
             emptyRatio /= 1.0d;
-            cmpBidMillis = bottom + (long) (range * quality * bidCampaignDefault * (1d - emptyRatio));
+            cmpBidMillis = bottom + (long) (range * quality * bidCampaignDefault * (1d - emptyRatio) * dens);
             isDesire = true;
         }
 
