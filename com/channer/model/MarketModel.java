@@ -3,6 +3,7 @@ package com.channer.model;
 
 import com.channer.BidBundleUtil;
 import com.channer.CampaignData;
+import com.channer.MathUtil;
 import edu.umich.eecs.tac.props.Ad;
 import tau.tac.adx.ads.properties.AdType;
 import tau.tac.adx.devices.Device;
@@ -79,7 +80,7 @@ public class MarketModel {
 //        System.out.println("total users calculated by core:" + userNumber);
     }
 
-    private static final double QUERY_BASIC_PRICE[] = {0.1, 0.3, 0.3, 0.5};
+    private static final double QUERY_BASIC_PRICE[] = {0.01, 0.03, 0.03, 0.05};
 
     private void initQuerySpace() {
         int publisherSize = mPublisherModel.mPublisers.length;
@@ -168,6 +169,7 @@ public class MarketModel {
     }
 
     private int performanceCount;
+
     private double efficienceMeasure(double board[][], int segIndex, int numCam,
                                      List<CampaignData> list) {
         performanceCount++;
@@ -555,10 +557,12 @@ public class MarketModel {
         // load
         double count = campaign.impsTogo();
         double pressure = campaign.timePressure;
+
+        double factor = (((MathUtil.sigmoid(0.8d * (pressure - 0.55d)) - 0.5d) / 0.5d) + 1.0d) * 1.7d - 1.0d;
         count *= 1.2d * pressure;
         for (int i = 0; i < pickChoices.size() && count > 0; i++) {
             count -= mQuerySpace[pickChoices.get(i)].population;
-            tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice * pressure;
+            tmpDouble = mQuerySpace[pickChoices.get(i)].bidPrice * factor;
             mQuerySpace[pickChoices.get(i)].externalMark = true;
             mQuerySpace[pickChoices.get(i)].updateDay = bidday;
             mQuerySpace[pickChoices.get(i)].bidPrice = tmpDouble;
@@ -570,7 +574,7 @@ public class MarketModel {
         }
 
         // limitation
-        double impressionLimit = campaign.impsTogo() / (double) (campaign.dayEnd - bidday + 1) * pressure;
+        double impressionLimit = campaign.impsTogo() / (double) (campaign.dayEnd - bidday + 1) * factor;
         double budgetLimit = campaign.budget * 2;
         bundle.setCampaignDailyLimit(campaign.id,
                 (int) impressionLimit, budgetLimit);
