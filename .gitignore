@@ -1,0 +1,7 @@
+logs/
+lib/
+.classpath
+.project
+auctions.csv
+config/
+config.properties
