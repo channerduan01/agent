@@ -50,7 +50,9 @@ public class CampaignCore {
     // store all evaluations for campaign
     private List<EvaluateModel> evaluateList = new ArrayList<>();
 
-    private double bidCampaignDefault = 0.5d;
+    private double bidCampaignDefault = 0.01d;
+    private double bidCampaignAdjustor = 1.01d;
+    
     private boolean isDesire = false;
 
     public long bidForNewCampaign(CampaignData com) {
@@ -63,15 +65,22 @@ public class CampaignCore {
         long upper = CampaignBidUtil.getCamBidUpperBound(com.reachImps, quality);
         long bottom = CampaignBidUtil.getCamBidBottomBound(com.reachImps, quality);
         double range = upper - bottom;
+        
         double dens = CampaignBidUtil.classifyCampaign(com.dayEnd-com.dayStart+1, com.reachImps, marketModel.calcuPopulations(com.targetSegment));
-
         double emptyRatio = 1.0d - evaluate.pressurePreRatio - evaluate.requireRatio;
+        double densRatio = CampaignBidUtil.fuzzyAdjust(dens*(1-emptyRatio));
+        
         isDesire = false;
-        if (emptyRatio < 0) {
+        if (emptyRatio < 0.1d) {
             cmpBidMillis = upper;
         } else {
-            emptyRatio /= 1.0d;
-            cmpBidMillis = bottom + (long) (range * quality * bidCampaignDefault * (1d - emptyRatio) * dens);
+        	emptyRatio /= 1.0d;
+        	cmpBidMillis = bottom;
+        	if (this.today > 15 || CampaignBidUtil.getTrends(true)>4)
+            cmpBidMillis = bottom + (long) (range * bidCampaignDefault * densRatio);
+            //cmpBidMillis = bottom;
+        	if (this.today > 45)
+            cmpBidMillis = bottom + (long) (range * quality * bidCampaignDefault * densRatio);
             isDesire = true;
         }
 
@@ -80,7 +89,7 @@ public class CampaignCore {
         return cmpBidMillis;
     }
 
-//    private double bidUcsDefault = 0.12d;
+/*//    private double bidUcsDefault = 0.12d;
 //    private boolean shouldBid = true;
 //
 //    public double bidForUCS() {
@@ -110,7 +119,7 @@ public class CampaignCore {
 //            bidUcsDefault = bidUcsDefault / 1.2d;
 //        }
 //    }
-
+*/
     public AdxBidBundle bidForExchangeX() {
         List<CampaignData> list = getNextDayActiveCampaign();
 
@@ -167,7 +176,8 @@ public class CampaignCore {
         else {
             marketModel.addCampaignTracker(new CampaignTrackModel(campaign, CampaignTrackModel.WON_US));
             if (isDesire) {
-                bidCampaignDefault *= 1.3d;
+            	bidCampaignAdjustor = CampaignBidUtil.updateAdjustor(bidCampaignAdjustor, true);
+            	bidCampaignDefault = CampaignBidUtil.updateBasic(bidCampaignDefault, bidCampaignAdjustor);
                 showBidCampaignFactor("add");
             }
         }
@@ -179,7 +189,8 @@ public class CampaignCore {
         campaign.budget = lastbidPrice;
         marketModel.addCampaignTracker(new CampaignTrackModel(campaign, CampaignTrackModel.WON_OTHERS));
         if (isDesire) {
-            bidCampaignDefault /= 1.4d;
+        	bidCampaignAdjustor = CampaignBidUtil.updateAdjustor(bidCampaignAdjustor, false);
+        	bidCampaignDefault = CampaignBidUtil.updateBasic(bidCampaignDefault, bidCampaignAdjustor);
             showBidCampaignFactor("reduce");
         }
     }

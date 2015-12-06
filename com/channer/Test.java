@@ -41,12 +41,7 @@ public class Test {
         System.out.println("Hello channer!");
         try {
             tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-1.conf"});
-            tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-2.conf"});
-            tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-3.conf"});
-            tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-4.conf"});
-            tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-5.conf"});
-            tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-6.conf"});
-            tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-7.conf"});
+
            // tau.tac.adx.agentware.Main.main(new String[]{"-config", "config/aw-1.conf"});
         } catch (Exception e) {
             System.out.println("IO exception!");
