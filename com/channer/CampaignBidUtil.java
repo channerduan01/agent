@@ -38,11 +38,11 @@ public class CampaignBidUtil {
     
     public static void initialFuzzy(double max)
     {
-    	fuzzy[0] = new FuzzyFunction(0.0d,0.2*max,0.75);
-    	fuzzy[1] = new FuzzyFunction(0.1*max,0.2*max,0.3*max,0.4*max,0.9);
-    	fuzzy[2] = new FuzzyFunction(0.3*max,0.4*max,0.7*max,0.8*max,1.0);
-    	fuzzy[3] = new FuzzyFunction(0.7*max,0.8*max,0.9*max,max,2);
-    	fuzzy[4] = new FuzzyFunction(0.9*max,max,4);
+    	fuzzy[0] = new FuzzyFunction(0.0d,0.2*max,0.8);
+    	fuzzy[1] = new FuzzyFunction(0.1*max,0.2*max,0.3*max,0.4*max,1.0);
+    	fuzzy[2] = new FuzzyFunction(0.3*max,0.4*max,0.7*max,0.8*max,1.2);
+    	fuzzy[3] = new FuzzyFunction(0.7*max,0.8*max,0.9*max,max,5);
+    	fuzzy[4] = new FuzzyFunction(0.9*max,max,10);
     	fuzzy[4].setDir(false);
     }
     
@@ -70,11 +70,11 @@ public class CampaignBidUtil {
     public static double updateAdjustor(double adjustor, boolean won)
     {
     	if (won){
-    		adjustor *= Math.pow(1.1, Wintrend);
+    		adjustor *= Math.pow(1.15, Wintrend);
     		Wintrend +=1;
     		Losetrend = Math.floor(Losetrend/3);
     	}else{
-    		adjustor = Math.pow(0.9, Losetrend);
+    		adjustor = Math.pow(0.85, Losetrend);
     		Losetrend += 1;
     		Wintrend = Math.floor(Wintrend/2);
     	}
