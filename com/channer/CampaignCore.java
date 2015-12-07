@@ -50,8 +50,8 @@ public class CampaignCore {
 	// store all evaluations for campaign
 	private List<EvaluateModel> evaluateList = new ArrayList<>();
 
-	private double bidCampaignDefault = 0.01d;
-	private double bidCampaignAdjustor = 1.01d;
+	private double bidCampaignDefault = 0.1d;
+	private double bidCampaignAdjustor = 1.0d;
 
 	private boolean isDesire = false;
 
@@ -83,9 +83,6 @@ public class CampaignCore {
 					cmpBidMillis = upper;
 			} else {
 				if (this.today > 15 || CampaignBidUtil.getTrends(true) > 4)
-					cmpBidMillis = bottom + (long) (range * quality * bidCampaignDefault * densRatio);
-				// cmpBidMillis = bottom;
-				if (this.today > 45)
 					cmpBidMillis = bottom + (long) (range * quality * bidCampaignDefault * densRatio);
 			}
 			isDesire = true;
@@ -165,7 +162,7 @@ public class CampaignCore {
 			marketModel.addCampaignTracker(new CampaignTrackModel(campaign, CampaignTrackModel.RANDOM_US));
 		else {
 			marketModel.addCampaignTracker(new CampaignTrackModel(campaign, CampaignTrackModel.WON_US));
-			if (isDesire) {
+			if (isDesire||this.today >14) {
 				bidCampaignAdjustor = CampaignBidUtil.updateAdjustor(bidCampaignAdjustor, true);
 				bidCampaignDefault = CampaignBidUtil.updateBasic(bidCampaignDefault, bidCampaignAdjustor);
 				showBidCampaignFactor("add");
@@ -178,7 +175,7 @@ public class CampaignCore {
 	public void otherWonCampaign(CampaignData campaign, String userMark) {
 		campaign.budget = lastbidPrice;
 		marketModel.addCampaignTracker(new CampaignTrackModel(campaign, CampaignTrackModel.WON_OTHERS));
-		if (isDesire) {
+		if (isDesire||this.today > 14) {
 			bidCampaignAdjustor = CampaignBidUtil.updateAdjustor(bidCampaignAdjustor, false);
 			bidCampaignDefault = CampaignBidUtil.updateBasic(bidCampaignDefault, bidCampaignAdjustor);
 			showBidCampaignFactor("reduce");
