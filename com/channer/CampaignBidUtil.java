@@ -41,17 +41,17 @@ public class CampaignBidUtil {
     	fuzzy[0] = new FuzzyFunction(0.0d,0.2*max,0.75);
     	fuzzy[1] = new FuzzyFunction(0.1*max,0.2*max,0.3*max,0.4*max,0.9);
     	fuzzy[2] = new FuzzyFunction(0.3*max,0.4*max,0.7*max,0.8*max,1.0);
-    	fuzzy[3] = new FuzzyFunction(0.7*max,0.8*max,0.9*max,max,1.5);
-    	fuzzy[4] = new FuzzyFunction(0.9*max,max,2);
+    	fuzzy[3] = new FuzzyFunction(0.7*max,0.8*max,0.9*max,max,2);
+    	fuzzy[4] = new FuzzyFunction(0.9*max,max,4);
     	fuzzy[4].setDir(false);
     }
     
-    public static double classifyCampaign(long days, long reach, double size){
-    	double dens = reach/(days*size);
+    public static double classifyCampaign(double duration, long reach, double size){
+    	double dens = reach/(duration*size);
     	//Get dens index from dens
     	int densIndex =(int) (dens*10 / 3.5d);
     	//Get factor index from days
-    	int dayIndex = (int)days/5;
+    	int dayIndex = (int)duration/5;
     	return CampaignDensity[dayIndex*3+densIndex];
     }
     
