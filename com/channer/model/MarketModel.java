@@ -80,7 +80,13 @@ public class MarketModel {
 //        System.out.println("total users calculated by core:" + userNumber);
     }
 
-    private static final double QUERY_BASIC_PRICE[] = {0.05, 0.15, 0.15, 0.25};
+    private static final double INIT_PRICE_CONTROL = 0.5d;
+
+    private static final double QUERY_BASIC_PRICE[] = {
+            0.05 * INIT_PRICE_CONTROL
+            , 0.15 * INIT_PRICE_CONTROL
+            , 0.15 * INIT_PRICE_CONTROL
+            , 0.25 * INIT_PRICE_CONTROL};
 
     private void initQuerySpace() {
         int publisherSize = mPublisherModel.mPublisers.length;
@@ -419,9 +425,9 @@ public class MarketModel {
         double ratioOfZero = (double) numberOfZero / (double) keySet.size();
 
         double redress = 1d;
-        if (ratioOfOne > 0.92d) {
-            redress = 0.6d;
-        } else if (ratioOfZero > 0.92d) {
+        if (ratioOfOne > 0.9d) {
+            redress = 0.72d;
+        } else if (ratioOfZero > 0.9d) {
             redress = 2d;
         }
 
