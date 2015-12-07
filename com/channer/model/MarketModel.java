@@ -80,7 +80,7 @@ public class MarketModel {
 //        System.out.println("total users calculated by core:" + userNumber);
     }
 
-    private static final double QUERY_BASIC_PRICE[] = {0.01, 0.03, 0.03, 0.05};
+    private static final double QUERY_BASIC_PRICE[] = {0.05, 0.15, 0.15, 0.25};
 
     private void initQuerySpace() {
         int publisherSize = mPublisherModel.mPublisers.length;
@@ -446,7 +446,7 @@ public class MarketModel {
         Set<AdNetworkKey> keySet = report.keys();
         AdNetworkReportEntry entry;
         for (AdNetworkKey key : keySet) {
-//            System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
+            System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
             cost += report.getAdNetworkReportEntry(key).getCost();
             entry = report.getAdNetworkReportEntry(key);
 
@@ -463,7 +463,7 @@ public class MarketModel {
             int index = segMark * publisherChannelSize + publisherIndex * 4 + channel;
 
             double winRatio = (double) entry.getWinCount() / (double) entry.getBidCount();
-//            System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
+            System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
 
             if (winRatio == 1) {
                 mQuerySpace[index].bidPrice /= 1.2d;

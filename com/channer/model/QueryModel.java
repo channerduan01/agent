@@ -54,7 +54,10 @@ public class QueryModel {
         } else if (d >= 7 && d < 10) {
             rate = 0.7;
         } else {
-            rate = 0.9;
+            if (numReduce == 0 && numAdd == 0)
+                rate = 0.85;
+            else
+                rate = 0.95;
         }
         bidPrice = bidPrice * rate;
         numDecay++;
