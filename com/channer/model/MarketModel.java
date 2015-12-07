@@ -446,11 +446,21 @@ public class MarketModel {
     }
 
     public void bidBundleFeedback(AdNetworkReport report, int today) {
+        int i, j;
         double cost = 0d;
         int numberOfZero = 0;
         int numberOfOne = 0;
         Set<AdNetworkKey> keySet = report.keys();
         AdNetworkReportEntry entry;
+        double atomSegSize[] = new double[mCoreData.length];
+        double atomSegWin[] = new double[mCoreData.length];
+        double atomSegLose[] = new double[mCoreData.length];
+        for (i = 0; i < mCoreData.length; i++) {
+            atomSegSize[i] = 0;
+            atomSegWin[i] = 0;
+            atomSegLose[i] = 0;
+        }
+        int publisherChannelSize = mPublisherModel.mPublisers.length * 4;
         for (AdNetworkKey key : keySet) {
             System.out.println("!!!!!!! report:" + report.getAdNetworkReportEntry(key).toString());
             cost += report.getAdNetworkReportEntry(key).getCost();
@@ -465,12 +475,13 @@ public class MarketModel {
             else if (isM) channel = 1;
             else if (isV) channel = 2;
             else channel = 3;
-            int publisherChannelSize = mPublisherModel.mPublisers.length * 4;
             int index = segMark * publisherChannelSize + publisherIndex * 4 + channel;
 
             double winRatio = (double) entry.getWinCount() / (double) entry.getBidCount();
             System.out.println("!!!!" + winRatio + " " + mQuerySpace.toString());
-
+            atomSegSize[segMark] += (double) entry.getBidCount();
+            atomSegWin[segMark] += (double) entry.getWinCount();
+            atomSegLose[segMark] += (double) (entry.getBidCount() - entry.getWinCount());
             if (winRatio == 1) {
                 mQuerySpace[index].bidPrice /= 1.2d;
                 numberOfOne++;
@@ -490,22 +501,47 @@ public class MarketModel {
         double ratioOfZero = (double) numberOfZero / (double) keySet.size();
 
         double redress = 1d;
-        if (ratioOfOne > 0.92d) {
-            redress = 0.6d;
-        } else if (ratioOfZero > 0.92d) {
+        if (ratioOfOne > 0.9d) {
+            redress = 0.7d;
+        } else if (ratioOfZero > 0.9d) {
             redress = 2d;
         }
 
         if (redress != 1d) {
             System.out.println("!!!!!!!!!!! redress !!!!!!!!!!!!  " + redress);
             int size = mQuerySpace.length;
-            for (int i = 0; i < size; i++) {
+            for (i = 0; i < size; i++) {
                 mQuerySpace[i].bidPrice *= redress;
                 if (redress > 1)
                     mQuerySpace[i].numRedressAdd++;
                 else
                     mQuerySpace[i].numRedressReduce++;
                 mQuerySpace[i].updateDay = today;
+            }
+        } else {
+            // atom control strategy
+            for (i = 0; i < mCoreData.length; i++) {
+                if (atomSegSize[i] < 5)
+                    continue;
+                ratioOfOne = atomSegWin[i] / atomSegSize[i];
+                ratioOfZero = atomSegLose[i] / atomSegSize[i];
+                if (ratioOfOne > 0.9d) {
+                    redress = 0.7d;
+                } else if (ratioOfZero > 0.9d) {
+                    redress = 2d;
+                }
+                if (redress != 1d) {
+                    System.out.println("!!!!!!!!!!! redress-atom[" + i + "] !!!!!!!!!!!!  " + redress);
+                    int size = (i + 1) * publisherChannelSize;
+                    for (j = i * publisherChannelSize; j < size; j++) {
+                        mQuerySpace[j].bidPrice *= redress;
+                        if (redress > 1)
+                            mQuerySpace[j].numRedressAdd++;
+                        else
+                            mQuerySpace[j].numRedressReduce++;
+                        mQuerySpace[j].updateDay = today;
+                    }
+                }
             }
         }
     }
